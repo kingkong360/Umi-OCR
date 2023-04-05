@@ -921,7 +921,25 @@ class MainWin:
                 '任务进行中', '请停止任务后，再添加图片')
             return
         suf = Config.get('imageSuffix').split()  # 许可后缀列表
+        
+        def addPdf(path): #添加一个PDF。传入路径
+            import fitz  # pymupdf库
+            jpeg_foldername = os.path.join(os.getcwd(),'pdf_jpegs')
 
+            # 创建JPEG文件夹
+            if not os.path.exists(jpeg_foldername):
+                os.makedirs(jpeg_foldername)
+            # 打开PDF文件
+            with fitz.open(path) as pdf:
+                # 遍历PDF的每一页
+                for page_num,page in enumerate(pdf):
+                    # 将当前页转换为图像 (fitz.Pixmap)
+                    image = page.get_pixmap(alpha=False,dpi=300) #.getImageData(output="jpeg")
+                    jpeg_filename = os.path.join(jpeg_foldername, f'page_{page_num+1:03}.jpeg')
+                    # 保存图像文件
+                    image.save(jpeg_filename)
+                    addImage(jpeg_filename)
+                    
         def addImage(path):  # 添加一张图片。传入路径，许可后缀。
             path = path.replace("/", "\\")  # 浏览是左斜杠，拖入是右斜杠；需要统一
             if suf and os.path.splitext(path)[1].lower() not in suf:
@@ -956,13 +974,25 @@ class MainWin:
                 if isRecursiveSearch:  # 需要递归子文件夹
                     for subDir, dirs, subFiles in os.walk(path):
                         for s in subFiles:
-                            addImage(subDir+"\\"+s)
+                            if os.path.splitext(s)[1].lower() == '.pdf':  #WXY添加
+                                #pdf转JPGE，再加入到path中去
+                                addPdf(subDir+"\\"+s)                    
+                            else:
+                                addImage(subDir+"\\"+s)
                 else:  # 非递归，只搜索子文件夹一层
                     subFiles = os.listdir(path)  # 遍历子文件
                     for s in subFiles:
-                        addImage(path+"\\"+s)  # 添加
+                        if os.path.splitext(s)[1].lower() == '.pdf':  #WXY添加
+                            #pdf转JPGE，再加入到path中去
+                            addPdf(path+"\\"+s)                    
+                        else:
+                            addImage(path+"\\"+s)  # 添加
             elif os.path.isfile(path):  # 若是文件：
-                addImage(path)  # 直接添加
+                if os.path.splitext(path)[1].lower() == '.pdf':  #WXY添加
+                    #pdf转JPGE，再加入到path中去
+                    addPdf(path)                    
+                else:
+                    addImage(path)  # 直接添加
 
     # 忽略区域 ===============================================
 
